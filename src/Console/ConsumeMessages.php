@@ -4,7 +4,7 @@ namespace Core\Messaging\Console;
 
 use DateTimeImmutable;
 use Illuminate\Console\Command;
-use Core\Messaging\Contracts\Consumer;
+use Core\Contracts\Consumer;
 use Core\EventSourcing\DomainEvent;
 use Core\EventSourcing\Contracts\EventDispatcher;
 use Exception;
