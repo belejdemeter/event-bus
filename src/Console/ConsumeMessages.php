@@ -3,6 +3,7 @@
 namespace Core\Messaging\Console;
 
 use DateTimeImmutable;
+use DateTimeZone;
 use Illuminate\Console\Command;
 use Core\Contracts\Consumer;
 use Core\EventSourcing\DomainEvent;
@@ -56,7 +57,8 @@ class ConsumeMessages extends Command
     public function handle()
     {
         $process_id = getmypid();
-        $timestamp = (new DateTimeImmutable('now', env('APP_TIMEZONE', 'UTC')))->format('Y-m-d H:i:s.u');
+        $tz = new DateTimeZone(env('APP_TIMEZONE', 'UTC'));
+        $timestamp = (new DateTimeImmutable('now', $tz))->format('Y-m-d H:i:s');
         $this->info("Starting consumer process $process_id at $timestamp");
         $this->consumer->consume(function(string $message) {
             $event = $this->mapMessageToEvent($message);
