@@ -8,6 +8,7 @@ use Core\Contracts\Consumer;
 use Core\Contracts\Publisher;
 use Exception;
 use Illuminate\Support\Arr;
+use Ramsey\Uuid\Uuid;
 
 class AwsProvider implements Publisher, Consumer
 {
@@ -47,8 +48,10 @@ class AwsProvider implements Publisher, Consumer
     {
         $payload = array(
             'TopicArn' => $this->getTopicArn(),
-            'Message' => json_encode($str_message),
+            'Message' => $str_message,
             'MessageStructure' => 'string',
+            'MessageGroupId' => 'events-'.$this->service_id,
+            'MessageDeduplicationId' => (string)Uuid::uuid4(),
         );
         return $this->sns->publish($payload);
     }
@@ -61,13 +64,12 @@ class AwsProvider implements Publisher, Consumer
     {
         $queueUrl = $this->getQueueUrl();
         while (true) {
-
             $result = $this->sqs->receiveMessage([
                 'AttributeNames' => ['SentTimestamp'],
                 'MaxNumberOfMessages' => 10,
                 'MessageAttributeNames' => ['All'],
-                'QueueUrl' => $queueUrl, // REQUIRED
-                'WaitTimeSeconds' => 20,
+                'QueueUrl' => $queueUrl,
+                'WaitTimeSeconds' => 20, // 0-20
             ]);
             $messages = $result->get('Messages');
 
@@ -77,8 +79,8 @@ class AwsProvider implements Publisher, Consumer
                     $callback($message["Body"]);
 
                     $this->sqs->deleteMessage([
-                        'QueueUrl' => $queueUrl, // REQUIRED
-                        'ReceiptHandle' => $message['ReceiptHandle'] // REQUIRED
+                        'QueueUrl' => $queueUrl,
+                        'ReceiptHandle' => $message['ReceiptHandle']
                     ]);
                 }
             } else {
@@ -121,7 +123,7 @@ class AwsProvider implements Publisher, Consumer
         $region = $this->aws_region;
         $account_id = $this->aws_account_id;
         $resource_id = $this->service_id;
-        return "arn:aws:sns:$region:$account_id:$resource_id";
+        return "arn:aws:sns:$region:$account_id:$resource_id.fifo";
     }
 
     /**
@@ -133,7 +135,7 @@ class AwsProvider implements Publisher, Consumer
         $region = $this->aws_region;
         $account_id = $this->aws_account_id;
         $resource_id = $this->service_id;
-        return "https://sqs.$region.amazonaws.com/$account_id/$resource_id";
+        return "https://sqs.$region.amazonaws.com/$account_id/$resource_id.fifo";
     }
 
     /**
