@@ -56,7 +56,9 @@ class RabbitMqProvider implements Publisher, Consumer
      */
     public function consume(callable $callback)
     {
-        $this->makeConsumer($callback);
+        $this->makeConsumer(function(AMQPMessage $msg) use ($callback) {
+            return $callback($msg->getBody());
+        });
         while ($this->channel->is_consuming()) {
             $this->channel->wait();
         }
