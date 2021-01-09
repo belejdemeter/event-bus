@@ -22,6 +22,9 @@ class RabbitMqProvider implements Publisher, Consumer
     /** @var AMQPChannel */
     private $channel;
 
+    /** @var array */
+    private $config;
+
     /**
      * Create new instance.
      * @param array $config
@@ -30,7 +33,7 @@ class RabbitMqProvider implements Publisher, Consumer
     public function __construct(array $config, string $service_id)
     {
         $this->service_id = $service_id;
-        $this->connect($config);
+        $this->config = $config;
     }
 
     /**
@@ -40,6 +43,7 @@ class RabbitMqProvider implements Publisher, Consumer
      */
     public function publish(string $str_message)
     {
+        $this->connect($this->config);
         $message = new AMQPMessage($str_message, [
             'correlation_id' => (string)Uuid::uuid4(),
             'content_type' => 'application/json'
@@ -56,6 +60,7 @@ class RabbitMqProvider implements Publisher, Consumer
      */
     public function consume(callable $callback)
     {
+        $this->connect($this->config);
         $this->makeConsumer(function(AMQPMessage $msg) use ($callback) {
             return $callback($msg->getBody());
         });
